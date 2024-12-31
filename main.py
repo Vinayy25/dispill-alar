@@ -2,10 +2,13 @@ from fastapi import FastAPI, BackgroundTasks, HTTPException
 import json
 from contextlib import asynccontextmanager
 import paho.mqtt.client as mqtt
+import os
 from google.cloud import firestore
 
 db = firestore.Client.from_service_account_json("firebaseKeys.json")
-
+MQTT_BROKER = os.getenv("MQTT_BROKER", "mqtt.example.com")
+MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
+MQTT_TOPIC = "pill_dispenser/device_logs"
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # MQTT client setup
@@ -15,6 +18,9 @@ async def lifespan(app: FastAPI):
 
     mqtt_client.connect(MQTT_BROKER, MQTT_PORT)
     mqtt_client.loop_start()
+    mqtt_client.subscribe(MQTT_TOPIC)
+    mqtt_client.on_message = on_message
+
     print("MQTT connected.")
 
     app.state.mqtt_client = mqtt_client
@@ -26,6 +32,7 @@ async def lifespan(app: FastAPI):
     print("MQTT disconnected.")
 
 app = FastAPI(lifespan=lifespan)
+
 
 # Publish function to send data to a device
 def publish_to_device(mqtt_client, user_email: str, device_data: dict):
@@ -122,3 +129,32 @@ def fetch_timings_from_firestore(user_email: str):
     except Exception as e:
         print(f"Error fetching timings: {e}")
         return None
+    
+# Callback to handle MQTT messages
+def on_message(client, userdata, msg):
+    try:
+        payload = json.loads(msg.payload.decode("utf-8"))
+        user_email = payload.get("user_email")
+        timestamp = payload.get("timestamp")
+        slot_number = payload.get("slotNumber")
+        tablet_name = payload.get("tabletName", "Unknown")
+        quantity_taken = payload.get("quantityTaken", 0)
+
+        if not (user_email and timestamp and slot_number):
+            print("Incomplete payload received:", payload)
+            return
+
+        log_ref = db.collection("USER").document(user_email).collection("medication_logs")
+        log_data = {
+            "timestamp": timestamp,
+            "slotNumber": slot_number,
+            "tabletName": tablet_name,
+            "quantityTaken": quantity_taken,
+        }
+        log_ref.add(log_data)
+        print(f"Medication log added for {user_email}: {log_data}")
+
+    except json.JSONDecodeError as je:
+        print(f"Failed to decode MQTT payload: {msg.payload}")
+    except Exception as e:
+        print(f"Error processing MQTT message: {e}")
