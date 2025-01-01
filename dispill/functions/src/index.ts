@@ -23,7 +23,8 @@ interface TimePeriod {
 }
 
 // Fetch time periods from Firestore
-const fetchTimePeriods = async (userId: string): Promise<{ [key in keyof Frequency]: number }> => {
+const fetchTimePeriods = async (userId: string):
+  Promise<{ [key in keyof Frequency]: number }> => {
   const settingsDoc = await db
     .collection("USER")
     .doc(userId)
@@ -43,13 +44,20 @@ const fetchTimePeriods = async (userId: string): Promise<{ [key in keyof Frequen
 
   // Convert hour and minute to minutes since midnight
   const timePeriods: { [key in keyof Frequency]: number } = {
-    morning: defaultSettings.morning ? defaultSettings.morning.hour * 60 + defaultSettings.morning.minute : 8 * 60,
-    afternoon: defaultSettings.afternoon ? defaultSettings.afternoon.hour * 60 + defaultSettings.afternoon.minute : 14 * 60,
-    night: defaultSettings.night ? defaultSettings.night.hour * 60 + defaultSettings.night.minute : 20 * 60,
+    morning: defaultSettings.morning ? defaultSettings.morning.hour * 60 +
+    defaultSettings.morning.minute : 8 * 60,
+    afternoon: defaultSettings.afternoon ? defaultSettings.afternoon.hour * 60 +
+    defaultSettings.afternoon.minute : 14 * 60,
+    night: defaultSettings.night ? defaultSettings.night.hour * 60 +
+    defaultSettings.night.minute : 20 * 60,
   };
 
   return timePeriods;
 };
+
+export const healthCheck = functions.https.onRequest((req, res) => {
+  res.status(200).send("Healthy");
+});
 
 export const getRemainingMedications = functions.https.onRequest(
   async (req, res) => {
@@ -60,7 +68,7 @@ export const getRemainingMedications = functions.https.onRequest(
         res.status(400).send("Missing userId parameter");
         return;
       }
-        const timePeriods = await fetchTimePeriods(userId);
+      const timePeriods = await fetchTimePeriods(userId);
       // Fetch user's defaultPrescription data
       const prescriptionDoc = await db
         .collection("USER")
@@ -91,19 +99,19 @@ export const getRemainingMedications = functions.https.onRequest(
         .doc(today)
         .get();
 
-      const intakeHistory = intakeHistoryDoc.exists
-        ? intakeHistoryDoc.data() || {}
-        : {};
+      const intakeHistory = intakeHistoryDoc.exists?
+        intakeHistoryDoc.data() || {}:
+        {};
 
       const remainingMedications: string[] = [];
 
       // Check each slot in the prescription
       for (const [slot, details] of Object.entries(prescriptionData)) {
-        const { frequency, tabletName } = details;
-
+        const {frequency, tabletName} = details;
+        console.log(`Checking slot: ${slot}`);
         for (const [period, isRequired] of Object.entries(frequency)) {
           if (isRequired) {
-            const periodTime = timePeriods[period as keyof Frequency]; // Add type assertion
+            const periodTime = timePeriods[period as keyof Frequency];
 
             // Ensure periodTime is defined
             if (periodTime !== undefined) {

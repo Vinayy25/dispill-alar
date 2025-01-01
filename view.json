@@ -1,0 +1,44 @@
+{
+  "1": {
+    "everyday": "TRUE",
+    "duration": 0,
+    "slotNumberAllocated": 1,
+    "courseDuration": 0,
+    "certainDays": {
+      "tuesday": "False",
+      "monday": "False",
+      "sunday": "False",
+      "friday": "False",
+      "saturday": "False",
+      "wednesday": "False",
+      "thursday": "False"
+    },
+    "frequency": { "afternoon": "TRUE", "morning": "False", "night": "False" },
+    "dosage": 0.0,
+    "instructions": [],
+    "tabletName": "radio ",
+    "beforeFood": "False",
+    "notes": []
+  },
+  "2": {
+    "everyday": "TRUE",
+    "duration": 3,
+    "slotNumberAllocated": 2,
+    "courseDuration": 3,
+    "certainDays": {
+      "tuesday": "TRUE",
+      "monday": "False",
+      "sunday": "TRUE",
+      "friday": "False",
+      "saturday": "False",
+      "wednesday": "False",
+      "thursday": "TRUE"
+    },
+    "frequency": { "afternoon": "False", "morning": "TRUE", "night": "False" },
+    "dosage": 1.0,
+    "instructions": [],
+    "tabletName": "asprin",
+    "beforeFood": "False",
+    "notes": []
+  }
+}
