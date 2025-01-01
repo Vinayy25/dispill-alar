@@ -20,6 +20,14 @@ def on_message( client, userdata, msg):
         # Decode and parse the JSON message
         payload = msg.payload.decode("utf-8")
         data = json.loads(payload)
+        ## Example message:
+        # {
+        #     "message_context": "tablet_intake_update",
+        #     "email": "
+        #     "timestamp": "2021-09-01T08:00:00Z",
+        #     "taken": true,
+        #     "notes": "Taken with breakfast"
+        # }
         # Log the received message
         print(f"Received message on topic {msg.topic}: {data}")
         # Process based on the `message_context`
