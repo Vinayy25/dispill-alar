@@ -213,8 +213,8 @@ class _TabletDataContainerState extends State<TabletDataContainer> {
 
     return Consumer<PrescriptionStateProvider>(
         builder: (context, provider, child) {
-      tabletNameController.text =
-          provider.prescription[widget.index].tabletName;
+      var index = provider.prescription[widget.index];
+      tabletNameController.text = index.tabletName;
 
       return Container(
         height: 150,
@@ -311,9 +311,10 @@ class _TabletDataContainerState extends State<TabletDataContainer> {
                         provider.updatePrescriptionProperty(
                             index: widget.index,
                             frequency: {
-                              'morning': true,
-                              'afternoon': false,
-                              'night': false
+                              'morning': !(index.frequency['morning']!),
+                              'afternoon':
+                                  index.frequency['afternoon'] ?? false,
+                              'night': index.frequency['night'] ?? false
                             });
                       },
                       child: Container(
@@ -326,9 +327,9 @@ class _TabletDataContainerState extends State<TabletDataContainer> {
                         provider.updatePrescriptionProperty(
                             index: widget.index,
                             frequency: {
-                              'morning': false,
-                              'afternoon': true,
-                              'night': false
+                              'morning': index.frequency['morning'] ?? false,
+                              'afternoon': !(index.frequency['afternoon']!),
+                              'night': index.frequency['night'] ?? false
                             });
                       },
                       child: Container(
@@ -341,9 +342,10 @@ class _TabletDataContainerState extends State<TabletDataContainer> {
                         provider.updatePrescriptionProperty(
                             index: widget.index,
                             frequency: {
-                              'morning': false,
-                              'afternoon': false,
-                              'night': true
+                              'morning': index.frequency['morning'] ?? false,
+                              'afternoon':
+                                  index.frequency['afternoon'] ?? false,
+                              'night': !(index.frequency['night']!)
                             });
                       },
                       child: Container(
@@ -363,11 +365,9 @@ class _TabletDataContainerState extends State<TabletDataContainer> {
                       margin: const EdgeInsets.only(right: 20),
                       decoration: BoxDecoration(
                           border: Border.all(width: 1.5),
-                          color:
-                              provider.prescription[widget.index].beforeFood ==
-                                      true
-                                  ? Colors.greenAccent
-                                  : Colors.white),
+                          color: index.beforeFood == true
+                              ? Colors.greenAccent
+                              : Colors.white),
                       height: 20,
                       width: 100,
                       child: const Center(
@@ -392,11 +392,9 @@ class _TabletDataContainerState extends State<TabletDataContainer> {
                       margin: const EdgeInsets.only(right: 20),
                       decoration: BoxDecoration(
                           border: Border.all(width: 1.5),
-                          color:
-                              provider.prescription[widget.index].beforeFood ==
-                                      false
-                                  ? Colors.greenAccent
-                                  : Colors.white),
+                          color: index.beforeFood == false
+                              ? Colors.greenAccent
+                              : Colors.white),
                       height: 20,
                       width: 100,
                       child: const Center(
@@ -433,10 +431,7 @@ class _TabletDataContainerState extends State<TabletDataContainer> {
                       fontWeight: FontWeight.bold),
                   labels: const ['Everyday', 'Certain days'],
                   // icons: [ Icons.calendar_today, Icons.calendar_today ],
-                  selectedIndex:
-                      provider.prescription[widget.index].everyday == true
-                          ? 0
-                          : 1,
+                  selectedIndex: index.everyday == true ? 0 : 1,
                   selectedLabelIndex: (index) {
                     if (provider.toggleTakeCycle(widget.index) == true) {
                       showDialog(
@@ -685,7 +680,7 @@ Widget everydayPickerWidget(
                       borderRadius: BorderRadius.circular(10)),
                   child: TextFormField(
                     onChanged: (value) {
-                      if (value.isNotEmpty && !value.contains('.') ) {
+                      if (value.isNotEmpty && !value.contains('.')) {
                         provider.prescription[index].courseDuration =
                             int.parse(value);
                       }
@@ -1026,7 +1021,6 @@ Widget squareBoxWithDay(String day, bool state) {
     ),
   );
 }
-
 
 class ErrorDialog {
   static void showErrorDialog(BuildContext context, dynamic error) {
