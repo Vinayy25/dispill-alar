@@ -44,7 +44,7 @@ async def fetch_time_periods(user_id: str) -> Dict[str, int]:
         "afternoon": (default_settings.get("afternoon", {}).get("hour", 14) * 60 + default_settings.get("afternoon", {}).get("minute", 0)),
         "night": (default_settings.get("night", {}).get("hour", 20) * 60 + default_settings.get("night", {}).get("minute", 0)),
     }
-
+    
     return time_periods
 
 @app.get("/healthcheck")
@@ -57,7 +57,7 @@ async def get_remaining_medications(user_id: str  ):
     try:
         # Fetch time periods for the user
         time_periods = await fetch_time_periods(user_id)
-        print(time_periods)
+        
         # Fetch prescription data
         prescription_ref = db.collection("USER").document(user_id).collection("prescriptions").document("defaultPrescription")
         prescription_doc = prescription_ref.get()
@@ -73,6 +73,7 @@ async def get_remaining_medications(user_id: str  ):
         # Get current server timestamp
         current_time = datetime.utcnow()  # Use UTC time as current time
         current_minutes = current_time.hour * 60 + current_time.minute
+        print(time_periods, current_minutes)
 
         # Fetch intake history for today
         today = current_time.date().isoformat()  # Get today's date in ISO format
@@ -94,35 +95,40 @@ async def get_remaining_medications(user_id: str  ):
 
         # Check each slot in the prescription
         for slot, details in prescription_data.items():
-            print (slot, details)
+            
             if details['everyday'] == True:
                 frequency, tablet_name = details["frequency"], details["tabletName"]
 
                 for period, is_required in frequency.items():
                     if is_required:
                         period_time = time_periods.get(period)
+                        print(  "here is what you are looking for", period_time, current_minutes)
 
                         if period_time is not None:
-                            already_taken = intake_history.get(period, False)
-
-                            if not already_taken and period_time > current_minutes:
-                                remaining_medications.append(f"{tablet_name} ({period})")
+                            already_taken = intake_history[period]
+                            print ("already taken " , already_taken)
+                            if  already_taken is False or (period_time > current_minutes):
+                                remaining_medications.append(f"{details['tabletName']} ({period})")
+                            elif period_time < current_minutes and already_taken is False:
+                                print("missed the medication" , details['tabletName'])
                         else:
                             print(f"Warning: Undefined period: {period} in timePeriods")
-            else: 
+            else:
                 # Check if certainDays exists and process accordingly
+                frequency, tablet_name = details["frequency"], details["tabletName"]
                 certain_days = details.get('certainDays', {})
                 for period, is_required in frequency.items():
                     # Ensure `is_required` is True and the current day is marked as True in certainDays
                     current_day = current_time.strftime("%A").lower()
-                    if is_required and certain_days.get(current_day, "False").lower() == "true":
+                    if is_required and certain_days.get(current_day, "False") == True:
                         period_time = time_periods.get(period)
-                        
+                        print(  "here is what you are looking fri", period_time, current_minutes)
                         if period_time is not None:
-                            already_taken = intake_history.get(period, False)
-                            
-                            if not already_taken and period_time > current_minutes:
+                            already_taken = intake_history[period]
+                            if  already_taken is False or (period_time > current_minutes):
                                 remaining_medications.append(f"{details['tabletName']} ({period})")
+                            elif period_time < current_minutes and already_taken is False:
+                                print("missed the medication" , details['tabletName'])
                         else:
                             print(f"Warning: Undefined period: {period} in timePeriods")
 
