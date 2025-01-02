@@ -2,6 +2,7 @@ import 'package:animate_do/animate_do.dart';
 import 'package:dispill/models/firebase_model.dart';
 import 'package:dispill/states/auth_state.dart';
 import 'package:dispill/states/device_parameters_state.dart';
+import 'package:dispill/states/notification_state.dart';
 import 'package:dispill/states/prescription_state.dart';
 import 'package:dispill/states/settings_state.dart';
 
@@ -9,6 +10,7 @@ import 'package:dispill/utils.dart';
 import 'package:dispill/widgets/home_screen_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 List<String> weekday = [
   'Monday',
@@ -36,19 +38,31 @@ List<String> month = [
 ];
 
 class Homescreen extends StatefulWidget {
-  
-  
-
-   Homescreen({super.key,});
+  Homescreen({
+    super.key,
+  });
 
   @override
   State<Homescreen> createState() => _HomescreenState();
 }
 
-
-
 class _HomescreenState extends State<Homescreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _isLoaded = false; // To ensure the function is called only once
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isLoaded) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final notificationState =
+            Provider.of<NotificationState>(context, listen: false);
+        notificationState.getNotifications(FirebaseService().email.toString());
+      });
+      _isLoaded = true;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final height = MediaQuery.of(context).size.height;
@@ -56,9 +70,12 @@ class _HomescreenState extends State<Homescreen> {
     final String name = FirebaseService().username.toString();
     final DateTime now = DateTime.now();
 
+    final notificationState = Provider.of<NotificationState>(
+      context,
+    );
+
     return Scaffold(
       backgroundColor: Colors.white,
-
       key: _scaffoldKey,
       drawer: myDrawer(context),
       extendBody: true,
@@ -147,54 +164,114 @@ class _HomescreenState extends State<Homescreen> {
             const SizedBox(
               height: 20,
             ),
-            FadeInUp(
-              delay: const Duration(milliseconds: 100),
-              child: const HomeNotificationBlock(
-                  pillIcon: 'assets/images/pink_pills1.png',
-                  tabletDosage: 1,
-                  tabletName: 'Paracetamol',
-                  beforeFood: false,
-                  timeOfDay: 'Morning',
-                  timeToTake: TimeOfDay(hour: 8, minute: 00),
-                  statusName: 'assets/images/alert1.png'),
-            ),
-            FadeInUp(
-              delay: const Duration(milliseconds: 300),
-              child: const HomeNotificationBlock(
-                tabletName: 'Asprin',
-                pillIcon: 'assets/images/blue_pills1.png',
-                statusName: 'assets/images/taken1.png',
-                tabletDosage: 1,
-                beforeFood: false,
-                timeOfDay: 'Afternoon',
-                timeToTake: TimeOfDay(
-                  hour: 12,
-                  minute: 30,
+
+            if (notificationState.isLoading == true)
+              Container(
+                margin: const EdgeInsets.only(left: 20, right: 40, bottom: 20),
+                height: height * 0.3,
+                child: FadeInUp(
+                  delay: const Duration(milliseconds: 500),
+                  child: Skeletonizer(
+                    effect: ShimmerEffect(
+                      baseColor: Colors.grey[300]!,
+                      highlightColor: Colors.grey[100]!,
+                      duration: const Duration(seconds: 1),
+                    ),
+                    enabled: true,
+                    containersColor:
+                        const Color.fromRGBO(232, 174, 174, 74 / 100),
+                    child: ListView.builder(
+                      itemCount: 4,
+                      itemBuilder: (context, index) {
+                        return Card(
+                          child: ListTile(
+                            title: Text('Item number $index as title'),
+                            subtitle: const Text('Subtitle here'),
+                            leading: const Icon(Icons.ac_unit),
+                            trailing: const Icon(Icons.ac_unit),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ),
+              )
+            else
+              ListView.builder(
+                itemBuilder: (context, index) {
+                  final notification = notificationState.notifications[index];
+                  return FadeInUp(
+                    delay: Duration(milliseconds: 100 * index),
+                    child: HomeNotificationBlock(
+                      tabletName: notification.tabletName,
+                      pillIcon: (index % 2 == 0)
+                          ? 'assets/images/pink_pills1.png'
+                          : 'assets/images/blue_pills1.png',
+                      statusName: notification.missed
+                          ? 'assets/images/alert1.png'
+                          : 'assets/images/taken1.png',
+                      tabletDosage: notification.dosage,
+                      beforeFood: notification.afterFood,
+                      timeOfDay: notification.takeDuration,
+                      timeToTake: TimeOfDay(
+                        hour: int.parse(notification.takeTime.split(":")[0]),
+                        minute: int.parse(notification.takeTime.split(":")[1]),
+                      ),
+                    ),
+                  );
+                },
+                itemCount: notificationState.notifications.length,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
               ),
-            ),
-            FadeInUp(
-              delay: const Duration(milliseconds: 600),
-              child: const HomeNotificationBlock(
-                  tabletName: 'Acetaminophen',
-                  pillIcon: 'assets/images/pink_pills1.png',
-                  statusName: 'assets/images/alert1.png',
-                  tabletDosage: 1,
-                  beforeFood: false,
-                  timeOfDay: 'Night',
-                  timeToTake: TimeOfDay(hour: 8, minute: 30)),
-            ),
-            FadeInUp(
-              delay: const Duration(milliseconds: 900),
-              child: const HomeNotificationBlock(
-                  tabletName: 'Amoxicillin',
-                  pillIcon: 'assets/images/blue_pills1.png',
-                  statusName: 'assets/images/taken1.png',
-                  tabletDosage: 1,
-                  beforeFood: true,
-                  timeOfDay: 'Night',
-                  timeToTake: TimeOfDay(hour: 8, minute: 30)),
-            ),
+            // FadeInUp(
+            //   delay: const Duration(milliseconds: 100),
+            //   child: const HomeNotificationBlock(
+            //       pillIcon: 'assets/images/pink_pills1.png',
+            //       tabletDosage: 1,
+            //       tabletName: 'Paracetamol',
+            //       beforeFood: false,
+            //       timeOfDay: 'Morning',
+            //       timeToTake: TimeOfDay(hour: 8, minute: 00),
+            //       statusName: 'assets/images/alert1.png'),
+            // ),
+            // FadeInUp(
+            //   delay: const Duration(milliseconds: 300),
+            //   child: const HomeNotificationBlock(
+            //     tabletName: 'Asprin',
+            //     pillIcon: 'assets/images/blue_pills1.png',
+            //     statusName: 'assets/images/taken1.png',
+            //     tabletDosage: 1,
+            //     beforeFood: false,
+            //     timeOfDay: 'Afternoon',
+            //     timeToTake: TimeOfDay(
+            //       hour: 12,
+            //       minute: 30,
+            //     ),
+            //   ),
+            // ),
+            // FadeInUp(
+            //   delay: const Duration(milliseconds: 600),
+            //   child: const HomeNotificationBlock(
+            //       tabletName: 'Acetaminophen',
+            //       pillIcon: 'assets/images/pink_pills1.png',
+            //       statusName: 'assets/images/alert1.png',
+            //       tabletDosage: 1,
+            //       beforeFood: false,
+            //       timeOfDay: 'Night',
+            //       timeToTake: TimeOfDay(hour: 8, minute: 30)),
+            // ),
+            // FadeInUp(
+            //   delay: const Duration(milliseconds: 900),
+            //   child: const HomeNotificationBlock(
+            //       tabletName: 'Amoxicillin',
+            //       pillIcon: 'assets/images/blue_pills1.png',
+            //       statusName: 'assets/images/taken1.png',
+            //       tabletDosage: 1,
+            //       beforeFood: true,
+            //       timeOfDay: 'Night',
+            //       timeToTake: TimeOfDay(hour: 8, minute: 30)),
+            // ),
           ],
         ),
       )),

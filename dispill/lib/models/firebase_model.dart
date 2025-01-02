@@ -8,6 +8,7 @@ class FirebaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final user = FirebaseAuth.instance.currentUser;
   final username = FirebaseAuth.instance.currentUser?.displayName ?? "";
+  final email = FirebaseAuth.instance.currentUser?.email ?? "";
   Future<void> onUserLoginOrRegister() async {
     try {
       User? user = _auth.currentUser;

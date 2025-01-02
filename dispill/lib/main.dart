@@ -4,6 +4,7 @@ import 'package:dispill/home/home_screen.dart';
 import 'package:dispill/routes.dart';
 import 'package:dispill/states/auth_state.dart';
 import 'package:dispill/states/device_parameters_state.dart';
+import 'package:dispill/states/notification_state.dart';
 import 'package:dispill/states/prescription_state.dart';
 import 'package:dispill/states/settings_state.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -89,6 +90,9 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (context) {
           return PrescriptionStateProvider();
         }),
+        ChangeNotifierProvider(create: (context) {
+          return NotificationState();
+        }),
       ],
       child: MaterialApp(
         
@@ -112,7 +116,7 @@ class LandingPage extends StatelessWidget {
     return Consumer<AuthStateProvider>(
       builder: (context, provider, child) {
         return provider.isAuthenticated == true
-            ? Homescreen()
+            ? Homescreen( )
             : const LoginScreen();
       },
     );

@@ -8,7 +8,8 @@ class AuthStateProvider extends ChangeNotifier {
   AuthStateProvider() {
     checkAuthStatus();
   }
-
+  var user = FirebaseAuth.instance.currentUser;
+  
   void setAuthenticated(bool value) {
     isAuthenticated = value;
     notifyListeners();
