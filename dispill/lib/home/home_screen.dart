@@ -169,29 +169,31 @@ class _HomescreenState extends State<Homescreen> {
               Container(
                 margin: const EdgeInsets.only(left: 20, right: 40, bottom: 20),
                 height: height * 0.3,
-                child: FadeInUp(
-                  delay: const Duration(milliseconds: 500),
-                  child: Skeletonizer(
-                    effect: ShimmerEffect(
-                      baseColor: Colors.grey[300]!,
-                      highlightColor: Colors.grey[100]!,
-                      duration: const Duration(seconds: 1),
-                    ),
-                    enabled: true,
-                    containersColor:
-                        const Color.fromRGBO(232, 174, 174, 74 / 100),
-                    child: ListView.builder(
-                      itemCount: 4,
-                      itemBuilder: (context, index) {
-                        return Card(
-                          child: ListTile(
-                            title: Text('Item number $index as title'),
-                            subtitle: const Text('Subtitle here'),
-                            leading: const Icon(Icons.ac_unit),
-                            trailing: const Icon(Icons.ac_unit),
-                          ),
-                        );
-                      },
+                child: FadeOutDown(
+                  child: FadeInUp(
+                    delay: const Duration(milliseconds: 200),
+                    child: Skeletonizer(
+                      effect: ShimmerEffect(
+                        baseColor: Colors.grey[300]!,
+                        highlightColor: Colors.grey[100]!,
+                        duration: const Duration(seconds: 1),
+                      ),
+                      enabled: true,
+                      containersColor:
+                          const Color.fromRGBO(232, 174, 174, 74 / 100),
+                      child: ListView.builder(
+                        itemCount: 4,
+                        itemBuilder: (context, index) {
+                          return Card(
+                            child: ListTile(
+                              title: Text('Item number $index as title'),
+                              subtitle: const Text('Subtitle here'),
+                              leading: const Icon(Icons.ac_unit),
+                              trailing: const Icon(Icons.ac_unit),
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),
@@ -200,7 +202,7 @@ class _HomescreenState extends State<Homescreen> {
               ListView.builder(
                 itemBuilder: (context, index) {
                   final notification = notificationState.notifications[index];
-                  return FadeInUp(
+                  return FadeInDown(
                     delay: Duration(milliseconds: 100 * index),
                     child: HomeNotificationBlock(
                       tabletName: notification.tabletName,
