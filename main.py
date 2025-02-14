@@ -7,7 +7,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from contextlib import asynccontextmanager
 from google.cloud import firestore
-from firebase_admin import auth, credentials, firestore, initialize_app, messaging, db as rtdb
+from firebase_admin import auth, credentials, firestore, initialize_app, messaging
 import json
 import logging
 from typing import Optional
@@ -19,9 +19,9 @@ logger = logging.getLogger(__name__)
 
 # Initialize Firebase Admin SDK
 cred = credentials.Certificate("firebaseKeys.json")
-db_url= os.getenv("FIREBASE_REALTIME_DATABASE_URL",)
+db_url = os.getenv("FIREBASE_REALTIME_DATABASE_URL",)
 firebase_app = initialize_app(cred, {
-    'databaseURL': db_url  # Add your RTDB URL
+    'databaseURL': db_url  # Add your RTDB URL if needed elsewhere
 })
 db = firestore.client()
 
@@ -31,8 +31,7 @@ security = HTTPBearer()
 # Constants
 LOW_INVENTORY_THRESHOLD = 5
 NOTIFICATION_WINDOW_MINUTES = 15
-RTDB_DEVICE_LOGS_PATH = "device_logs"
-RTDB_PRESCRIPTION_UPDATES_PATH = "prescription_updates"
+# Note: RTDB constants removed as we now use Firestore exclusively
 
 # ApScheduler for background tasks
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -67,14 +66,8 @@ class NotificationSettings(BaseModel):
 # Enhanced lifespan management
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Setup RTDB listener
-    def rtdb_listener(event):
-        logger.info(f"RTDB event received: {event.event_type} {event.path}")
-        if event.event_type == 'put':
-            handle_rtdb_update(event.data, event.path)
+    # Removed RTDB listener logic as we now read logs from Firestore only
 
-    rtdb.reference(RTDB_DEVICE_LOGS_PATH).listen(rtdb_listener)
-    
     # Initialize scheduler
     scheduler.add_job(
         check_reminders, 
@@ -98,64 +91,7 @@ app = FastAPI(
     redoc_url="/api/redoc"
 )
 
-# Firebase Realtime Database handler
-def handle_rtdb_update(data: dict, path: str):
-    try:
-        logger.info(f"Processing RTDB update: {data}")
-        
-        # Validate required fields
-        required_fields = ["user_email", "timestamp", "slotNumber"]
-        if not all(field in data for field in required_fields):
-            logger.warning(f"Invalid RTDB payload: {data}")
-            return
-
-        user_email = data["user_email"]
-        timestamp = datetime.fromisoformat(data["timestamp"])
-        slot_number = data["slotNumber"]
-        quantity_taken = data.get("quantityTaken", 0)
-        device_status = data.get("status", {})
-
-        # Update Firestore
-        transaction = db.transaction()
-        user_ref = db.collection("USER").document(user_email)
-        
-        @firestore.transactional
-        def update_inventory(transaction, user_ref):
-            # Update medication log
-            log_ref = user_ref.collection("medication_logs").document()
-            transaction.set(log_ref, {
-                "timestamp": timestamp,
-                "slotNumber": slot_number,
-                "quantityTaken": quantity_taken,
-                "status": device_status
-            })
-
-            # Update prescription
-            prescription_ref = user_ref.collection("prescriptions").document("defaultPrescription")
-            prescription = transaction.get(prescription_ref)
-            prescription_data = prescription.get(slot_number, {})
-            
-            new_count = max(prescription_data.get("remainingCount", 0) - quantity_taken, 0)
-            transaction.update(prescription_ref, {f"{slot_number}.remainingCount": new_count})
-            
-            return new_count
-
-        new_count = update_inventory(transaction, user_ref)
-        
-        # Check low inventory
-        if new_count <= LOW_INVENTORY_THRESHOLD:
-            user_doc = user_ref.get()
-            if user_doc.exists:
-                user_data = user_doc.to_dict()
-                if user_data.get("notification_settings", {}).get("low_inventory_alerts", True):
-                    send_fcm_notification(
-                        user_data.get("fcm_token"),
-                        "Low Inventory Alert",
-                        f"Slot {slot_number}: {new_count} pills remaining"
-                    )
-
-    except Exception as e:
-        logger.error(f"RTDB processing error: {str(e)}", exc_info=True)
+# Removed handle_rtdb_update since data is now read from Firestore directly
 
 # Dependency for Firebase authentication
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -170,7 +106,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-# Enhanced Prescription Management with RTDB
+# Enhanced Prescription Management using Firestore only
 @app.post("/prescriptions/{email}", status_code=status.HTTP_201_CREATED)
 async def update_prescription(
     email: str,
@@ -192,59 +128,27 @@ async def update_prescription(
     
     try:
         update_prescription_tx(db.transaction(), prescription_ref, prescription_data)
-        # Write to RTDB
-        rtdb.reference(f"{RTDB_PRESCRIPTION_UPDATES_PATH}/{email}").update({
-            prescription_data.slotNumber: prescription_data.model_dump()
-        })
+        # Removed writing to RTDB; logic now uses Firestore intake_history
     except Exception as e:
         logger.error(f"Prescription update failed: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to update prescription")
     
     return {"status": "Prescription updated", "slot": prescription_data.slotNumber}
 
-# Remaining endpoints and helper functions remain the same as original
-# (Device Status, Upcoming Doses, Notification Settings, etc.)
-# ...
-
-# Firebase Cloud Messaging (FCM) Notification Handler
-def send_fcm_notification(fcm_token: str, title: str, body: str):
-    try:
-        if not fcm_token:
-            logger.warning("No FCM token available for user")
-            return
-
-        message = messaging.Message(
-            notification=messaging.Notification(
-                title=title,
-                body=body
-            ),
-            token=fcm_token
-        )
-        
-        response = messaging.send(message)
-        logger.info(f"Successfully sent FCM notification: {response}")
-        return response
-        
-    except Exception as e:
-        logger.error(f"Failed to send FCM notification: {str(e)}", exc_info=True)
-        raise
-
-# Health Check updated for RTDB
+# Health Check updated to verify Firestore connectivity only
 @app.get("/health")
-async def health_check(db: firestore.Client = Depends(lambda: db)):
+async def health_check():
     try:
-        # Verify database connectivity
+        # Verify Firestore connectivity
         db.collection("HEALTHCHECK").document("ping").set({"timestamp": datetime.utcnow()})
-        # Verify RTDB connectivity
-        rtdb.reference('healthcheck').set({'timestamp': datetime.utcnow().isoformat()})
-        return {"status": "ok", "services": ["firestore", "rtdb"]}
+        return {"status": "ok", "services": ["firestore"]}
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
         return JSONResponse(
             status_code=503,
             content={"status": "unavailable"}
         )
-    
+
 # Enhanced notification scheduler with timezone awareness
 async def check_reminders():
     logger.info("Running reminder check")
@@ -289,9 +193,11 @@ async def check_reminders():
                     
         except Exception as e:
             logger.error(f"Error processing user {user.id}: {str(e)}", exc_info=True)
+
 def get_user_time_windows(email: str):
     # Implementation to get user-specific time windows
     return {}
+
 # Function to check and send due notifications
 def check_due_notification(user, period, due_time, intake_history_ref):
     user_data = user.to_dict()
@@ -323,7 +229,6 @@ def check_due_notification(user, period, due_time, intake_history_ref):
     
     if not taken and not notification_sent and current_time_user_tz >= window_start:
         # Send reminder notification
-        user_email = user.id
         user_doc = user.reference.get()
         if user_doc.exists:
             user_data = user_doc.to_dict()
@@ -339,17 +244,19 @@ def check_due_notification(user, period, due_time, intake_history_ref):
                 # Update intake history to mark notification as sent
                 update_data = {f"{period}.notification_sent": True}
                 intake_history_doc_ref.update(update_data)
+
 # Helper function to get user's timezone as ZoneInfo
 def get_user_timezone(user_data):
     tz_str = user_data.get("timezone")
     return ZoneInfo(tz_str) if tz_str else timezone.utc
+
 # Function to check and send missed dose notifications
 def check_missed_dose(user, period, due_time, intake_history_ref):
     user_data = user.to_dict()
     user_tz = get_user_timezone(user_data)
     
     today = datetime.now(user_tz).date().isoformat()
-    intake_history_doc_ref = intake_history_ref.document(today)
+    intake_history_doc_ref = user.reference.collection("intake_history").document(today)
     intake_history_doc = intake_history_doc_ref.get()
     
     if not intake_history_doc.exists:
@@ -373,7 +280,6 @@ def check_missed_dose(user, period, due_time, intake_history_ref):
     
     if not taken and not missed_notification_sent and current_time_user_tz > missed_time:
         # Send missed dose notification
-        user_email = user.id
         user_doc = user.reference.get()
         if user_doc.exists:
             user_data = user_doc.to_dict()
@@ -390,6 +296,28 @@ def check_missed_dose(user, period, due_time, intake_history_ref):
                 update_data = {f"{period}.missed_notification_sent": True}
                 intake_history_doc_ref.update(update_data)
 
+# Firebase Cloud Messaging (FCM) Notification Handler
+def send_fcm_notification(fcm_token: str, title: str, body: str):
+    try:
+        if not fcm_token:
+            logger.warning("No FCM token available for user")
+            return
+
+        message = messaging.Message(
+            notification=messaging.Notification(
+                title=title,
+                body=body
+            ),
+            token=fcm_token
+        )
+        
+        response = messaging.send(message)
+        logger.info(f"Successfully sent FCM notification: {response}")
+        return response
+        
+    except Exception as e:
+        logger.error(f"Failed to send FCM notification: {str(e)}", exc_info=True)
+        raise
 
 class IntakeUpdate(BaseModel):
     email: str
