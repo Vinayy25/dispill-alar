@@ -1,8 +1,30 @@
-fastapi
-firebase_admin
-requests
-pyfcm
-loadotenv
-os
-apscheduler
-paho-mqtt
+# FastAPI and Uvicorn for the web server
+fastapi==0.103.1
+uvicorn==0.23.2
+
+# Pydantic for data validation
+pydantic==2.4.2
+
+# Firebase Admin SDK for Firestore and FCM
+firebase-admin==6.2.0
+
+# Google Cloud Firestore client
+google-cloud-firestore==2.13.1
+
+# Paho MQTT for MQTT communication
+paho-mqtt==1.6.1
+
+# APScheduler for background tasks
+apscheduler==3.10.1
+
+# Logging
+logging==0.4.9.6
+
+# Python-dotenv for environment variables
+python-dotenv==1.0.0
+
+# Google Cloud Client Libraries
+google-cloud==0.34.0
+
+# Backport of zoneinfo for Python versions earlier than 3.9
+backports.zoneinfo==0.2.1
