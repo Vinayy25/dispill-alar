@@ -136,10 +136,7 @@ async def update_prescription(
     return {"status": "Prescription updated", "slot": prescription_data.slotNumber}
 
 @app.get("/prescriptions/{email}/details", status_code=200)
-async def get_prescription_details(email: str, user: dict = Depends(get_current_user)):
-    if user['email'] != email:
-        raise HTTPException(status_code=403, detail="Unauthorized access")
-    
+async def get_prescription_details(email: str):
     prescription_ref = db.collection("USER").document(email) \
         .collection("prescriptions").document("defaultPrescription")
     doc = prescription_ref.get()
@@ -150,7 +147,7 @@ async def get_prescription_details(email: str, user: dict = Depends(get_current_
     prescription_data = doc.to_dict()
     prescriptions_list = []
     
-    # Each key is a slot identifier and value is a dict with medication details
+    # Iterate through each slot (each key represents a slot) with its medication details
     for slot, details in prescription_data.items():
         if isinstance(details, dict):
             prescription_item = {
@@ -164,11 +161,12 @@ async def get_prescription_details(email: str, user: dict = Depends(get_current_
                 "frequency": details.get("frequency"),
                 "instructions": details.get("instructions"),
                 "notes": details.get("notes"),
-                "slotNumberAllocated": details.get("slotNumberAllocated")
+                "slotNumberAllocated": details.get("slotNumberAllocated"),
+                "certainDays": details.get("certainDays"),
             }
             prescriptions_list.append(prescription_item)
     
-    return prescriptions_list
+    return {"prescriptions": prescriptions_list}
 
 # Health Check updated to verify Firestore connectivity only
 @app.get("/health")
