@@ -229,7 +229,13 @@ async def check_reminders():
 
 def get_user_time_windows(email: str):
     # Implementation to get user-specific time windows
-    return {}
+    ref = db.collection("USER").document(email).collection("settings").document("defaultSettings")
+    #inside the ref it has fields like morning : {hour: "", minute: ""}, afternoon : {hour: "", minute: ""}, night : {hour: "", minute: ""}
+    return {
+        "morning": ref.get().to_dict().get("morning", {"hour": 0, "minute": 0}),
+        "afternoon": ref.get().to_dict().get("afternoon", {"hour": 0, "minute": 0}),
+        "night": ref.get().to_dict().get("night", {"hour": 0, "minute": 0})
+    }
 
 # Function to check and send due notifications
 def check_due_notification(user, period, due_time, intake_history_ref):
@@ -242,10 +248,10 @@ def check_due_notification(user, period, due_time, intake_history_ref):
     intake_history_doc = intake_history_doc_ref.get()
     
     if not intake_history_doc.exists:
-        # Initialize intake history for today
+        # Initialize intake history for today using new structure
         default_data = {
-            period: {"taken": False, "notification_sent": False, "missed_notification_sent": False}
-            for period in ["morning", "afternoon", "night"]
+            p: {"taken": False, "notification_sent": False, "missed_notification_sent": False}
+            for p in ["morning", "afternoon", "night"]
         }
         intake_history_doc_ref.set(default_data)
         intake_history_data = default_data
@@ -253,6 +259,16 @@ def check_due_notification(user, period, due_time, intake_history_ref):
         intake_history_data = intake_history_doc.to_dict()
     
     period_data = intake_history_data.get(period, {})
+    # Convert boolean fields into a dict without overwriting the "taken" status
+    if isinstance(period_data, bool):
+        period_data = {
+            "taken": period_data,
+            "notification_sent": False,
+            "missed_notification_sent": False
+        }
+        # Save the updated structure back to the database
+        intake_history_doc_ref.update({ period: period_data })
+    
     taken = period_data.get("taken", False)
     notification_sent = period_data.get("notification_sent", False)
     
@@ -266,6 +282,7 @@ def check_due_notification(user, period, due_time, intake_history_ref):
         if user_doc.exists:
             user_data = user_doc.to_dict()
             fcm_token = user_data.get("fcm_token")
+            print("fcm token", fcm_token)
             settings = user_data.get("notification_settings", {})
             
             if settings.get("reminders_enabled", True) and fcm_token:
@@ -274,7 +291,7 @@ def check_due_notification(user, period, due_time, intake_history_ref):
                     f"{period.capitalize()} Reminder",
                     "Time to take your medication!"
                 )
-                # Update intake history to mark notification as sent
+                # Update intake history to mark notification as sent without overwriting other fields
                 update_data = {f"{period}.notification_sent": True}
                 intake_history_doc_ref.update(update_data)
 
@@ -400,3 +417,13 @@ async def update_intake(update: IntakeUpdate):
                 "message": f"{update.period} intake updated for {update.email} on {parsed_date}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update intake history: {str(e)}")
+
+@app.post("/user/register-token", status_code=200)
+async def register_token(email: str, token: str, ):
+    user_ref = db.collection("USER").document(email)
+    user_doc = user_ref.get()
+    if not user_doc.exists:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user_ref.update({"fcm_token": token})
+    return {"status": "Token registered successfully"}
