@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:dispill/models/notification.dart';
 
 class HttpService {
-  String baseUrl = "cognito.fun";
+  String baseUrl = "http://cognito.fun";
   Future<List<Notifications>> getNotifications(String email) async {
     final url = Uri.parse(baseUrl + "/update-notifications?email=$email");
     final List<Notifications> notifications = [];
@@ -42,5 +42,26 @@ class HttpService {
     }
 
     return notifications;
+  }
+
+  Future<bool> registerFcmToken(String email, String token) async {
+    final url =
+        Uri.parse('$baseUrl/user/register-token?email=$email&token=$token');
+
+    try {
+      final response = await http.post(url);
+
+      if (response.statusCode == 200) {
+        final jsonResponse = json.decode(response.body);
+        print('FCM token registered successfully: ${jsonResponse['status']}');
+        return true;
+      } else {
+        print('Failed to register FCM token: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      print('Error registering FCM token: $e');
+      return false;
+    }
   }
 }

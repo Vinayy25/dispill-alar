@@ -2,6 +2,7 @@ import 'package:dispill/auth/auth_screen.dart';
 import 'package:dispill/firebase_options.dart';
 import 'package:dispill/home/home_screen.dart';
 import 'package:dispill/routes.dart';
+import 'package:dispill/services/http.dart';
 import 'package:dispill/states/auth_state.dart';
 import 'package:dispill/states/device_parameters_state.dart';
 import 'package:dispill/states/notification_state.dart';
@@ -42,8 +43,11 @@ void main() async {
     _showNotification(message);
   });
 
+
   runApp(const MyApp());
 }
+
+
 
 void _showNotification(RemoteMessage message) async {
   final notification = message.notification;

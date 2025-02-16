@@ -104,6 +104,7 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
     await FirebaseService().updateSettingsMorningTimeInFirstore(night,'night');
   }
+  
 }
 
 

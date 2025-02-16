@@ -1,5 +1,6 @@
 import 'package:animate_do/animate_do.dart';
 import 'package:dispill/models/firebase_model.dart';
+import 'package:dispill/services/http.dart';
 import 'package:dispill/states/auth_state.dart';
 import 'package:dispill/states/device_parameters_state.dart';
 import 'package:dispill/states/notification_state.dart';
@@ -8,6 +9,7 @@ import 'package:dispill/states/settings_state.dart';
 
 import 'package:dispill/utils.dart';
 import 'package:dispill/widgets/home_screen_widgets.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:skeletonizer/skeletonizer.dart';
@@ -73,6 +75,8 @@ class _HomescreenState extends State<Homescreen> {
     final notificationState = Provider.of<NotificationState>(
       context,
     );
+
+
 
     return Scaffold(
       backgroundColor: Colors.white,
