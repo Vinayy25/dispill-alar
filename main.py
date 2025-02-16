@@ -309,7 +309,7 @@ def check_missed_dose(user, period, due_time, intake_history_ref):
     intake_history_doc_ref = user.reference.collection("intake_history").document(today)
     intake_history_doc = intake_history_doc_ref.get()
     
-    if not intake_history_doc.exists():
+    if not intake_history_doc.exists:
         default_data = {
             period: {"taken": False, "notification_sent": False, "missed_notification_sent": False}
             for period in ["morning", "afternoon", "night"]
@@ -400,7 +400,7 @@ async def update_intake(update: IntakeUpdate):
     
     # Check if the intake history document exists
     history_doc = intake_history_ref.get()
-    if not history_doc.exists():
+    if not history_doc.exists:
         # Initialize with all periods as False
         intake_history_ref.set({
             "morning": False,
@@ -422,7 +422,7 @@ async def update_intake(update: IntakeUpdate):
 async def register_token(email: str, token: str, ):
     user_ref = db.collection("USER").document(email)
     user_doc = user_ref.get()
-    if not user_doc.exists():
+    if not user_doc.exists:
         raise HTTPException(status_code=404, detail="User not found")
     user_ref.update({"fcm_token": token})
     return {"status": "Token registered successfully"}
