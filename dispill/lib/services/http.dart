@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:dispill/models/notification.dart';
 
 class HttpService {
-  String baseUrl = "https://6209-2401-4900-9019-cfdb-c99-bad8-b967-a307.ngrok-free.app";
+  String baseUrl = "cognito.fun";
   Future<List<Notifications>> getNotifications(String email) async {
     final url = Uri.parse(baseUrl + "/update-notifications?email=$email");
     final List<Notifications> notifications = [];

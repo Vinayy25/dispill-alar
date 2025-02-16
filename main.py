@@ -309,7 +309,7 @@ def check_missed_dose(user, period, due_time, intake_history_ref):
     intake_history_doc_ref = user.reference.collection("intake_history").document(today)
     intake_history_doc = intake_history_doc_ref.get()
     
-    if not intake_history_doc.exists:
+    if not intake_history_doc.exists():
         default_data = {
             period: {"taken": False, "notification_sent": False, "missed_notification_sent": False}
             for period in ["morning", "afternoon", "night"]
@@ -400,7 +400,7 @@ async def update_intake(update: IntakeUpdate):
     
     # Check if the intake history document exists
     history_doc = intake_history_ref.get()
-    if not history_doc.exists:
+    if not history_doc.exists():
         # Initialize with all periods as False
         intake_history_ref.set({
             "morning": False,
@@ -422,8 +422,90 @@ async def update_intake(update: IntakeUpdate):
 async def register_token(email: str, token: str, ):
     user_ref = db.collection("USER").document(email)
     user_doc = user_ref.get()
+    if not user_doc.exists():
+        raise HTTPException(status_code=404, detail="User not found")
+    user_ref.update({"fcm_token": token})
+    return {"status": "Token registered successfully"}
+
+@app.get("/update-notifications", status_code=200)
+async def update_notifications(email: str):
+    # Verify user exists
+    user_ref = db.collection("USER").document(email)
+    user_doc = user_ref.get()
     if not user_doc.exists:
         raise HTTPException(status_code=404, detail="User not found")
     
-    user_ref.update({"fcm_token": token})
-    return {"status": "Token registered successfully"}
+    user_data = user_doc.to_dict()
+    user_tz = get_user_timezone(user_data)
+    today = datetime.now(user_tz).date().isoformat()
+    
+    # Initialize notifications dictionary (will only include untaken medications)
+    notifications = {}
+    
+    # Get intake history for today
+    intake_history_ref = user_ref.collection("intake_history").document(today)
+    intake_history_doc = intake_history_ref.get()
+    
+    if not intake_history_doc.exists:
+        default_history = {
+            p: {"taken": False, "notification_sent": False, "missed_notification_sent": False}
+            for p in ["morning", "afternoon", "night"]
+        }
+        intake_history_ref.set(default_history)
+        intake_history_data = default_history
+    else:
+        intake_history_data = intake_history_doc.to_dict()
+    
+    # Get prescription details and time windows
+    prescription_ref = user_ref.collection("prescriptions").document("defaultPrescription")
+    pres_doc = prescription_ref.get()
+    time_windows = get_user_time_windows(email)
+    
+    if pres_doc.exists:
+        prescriptions = pres_doc.to_dict()
+        
+        # Process each prescription (slot)
+        for slot_number, prescription in prescriptions.items():
+            if isinstance(prescription, dict):
+                frequency = prescription.get("frequency", {})
+                
+                # Check which periods this medication is prescribed for
+                for period in ["morning", "afternoon", "night"]:
+                    # Get intake status
+                    period_data = intake_history_data.get(period, {})
+                    taken = period_data.get("taken", False) if isinstance(period_data, dict) else period_data
+                    
+                    # Skip if medication is already taken
+                    if taken:
+                        continue
+                        
+                    # Only process if medication is scheduled for this period
+                    if frequency.get(period, False):
+                        window = time_windows.get(period, {"hour": 0, "minute": 0})
+                        take_time = f"{window['hour']:02d}:{window['minute']:02d}"
+                        
+                        # Initialize period in notifications if not exists
+                        if period not in notifications:
+                            notifications[period] = {
+                                "tabletName": "",
+                                "takeTime": take_time,
+                                "takeDuration": "",
+                                "taken": False,
+                                "missed": False,
+                                "afterFood": True,
+                                "dosage": 0.0
+                            }
+                        
+                        # Update or append medication details
+                        current_tablets = notifications[period]["tabletName"]
+                        new_tablet = prescription.get("tabletName", "")
+                        
+                        notifications[period].update({
+                            "tabletName": f"{current_tablets}, {new_tablet}".strip(", "),
+                            "takeTime": take_time,
+                            "takeDuration": str(prescription.get("duration", "")),
+                            "afterFood": not prescription.get("beforeFood", True),
+                            "dosage": float(prescription.get("dosage", 0))
+                        })
+    
+    return {"notifications": notifications}
