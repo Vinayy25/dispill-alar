@@ -510,7 +510,7 @@ async def update_notifications(email: str):
     
     return {"notifications": notifications}
 
-@app.get("/user/settings", status_code=200)
+@app.get("/user/time", status_code=200)
 async def get_user_settings(email: str):
     # Verify user exists
     user_ref = db.collection("USER").document(email)
