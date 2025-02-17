@@ -522,7 +522,7 @@ async def get_user_settings(email: str):
     settings_ref = user_ref.collection("settings").document("defaultSettings")
     settings_doc = settings_ref.get()
     
-    if not settings_doc.exists():
+    if not settings_doc.exists:
         raise HTTPException(status_code=404, detail="Settings not found")
     
     settings_data = settings_doc.to_dict()
