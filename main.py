@@ -400,7 +400,7 @@ async def update_intake(update: IntakeUpdate):
     
     # Check if the intake history document exists
     history_doc = intake_history_ref.get()
-    if not history_doc.exists:
+    if not history_doc.exists():
         # Initialize with all periods as False
         intake_history_ref.set({
             "morning": False,
@@ -509,3 +509,40 @@ async def update_notifications(email: str):
                         })
     
     return {"notifications": notifications}
+
+@app.get("/user/settings", status_code=200)
+async def get_user_settings(email: str):
+    # Verify user exists
+    user_ref = db.collection("USER").document(email)
+    user_doc = user_ref.get()
+    if not user_doc.exists:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get settings document
+    settings_ref = user_ref.collection("settings").document("defaultSettings")
+    settings_doc = settings_ref.get()
+    
+    if not settings_doc.exists():
+        raise HTTPException(status_code=404, detail="Settings not found")
+    
+    settings_data = settings_doc.to_dict()
+    
+    # Extract and format timing settings
+    response = {
+        "timings": {
+            "morning": {
+                "hour": settings_data.get("morning", {}).get("hour", 9),
+                "minute": settings_data.get("morning", {}).get("minute", 30)
+            },
+            "afternoon": {
+                "hour": settings_data.get("afternoon", {}).get("hour", 13),
+                "minute": settings_data.get("afternoon", {}).get("minute", 30)
+            },
+            "night": {
+                "hour": settings_data.get("night", {}).get("hour", 21),
+                "minute": settings_data.get("night", {}).get("minute", 30)
+            }
+        },
+    }
+    
+    return response
