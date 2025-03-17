@@ -25,6 +25,3 @@ python-dotenv==1.0.0
 
 # Google Cloud Client Libraries
 google-cloud==0.34.0
-
-# Backport of zoneinfo for Python versions earlier than 3.9
-backports.zoneinfo==0.2.1

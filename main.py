@@ -526,13 +526,13 @@ async def get_user_settings(email: str):
         raise HTTPException(status_code=404, detail="Settings not found")
     
     settings_data = settings_doc.to_dict()
-    
+    print("settings_data", settings_data)
     # Extract and format timing settings
     response = {
         "timings": {
             "morning": {
                 "hour": settings_data.get("morning", {}).get("hour", 9),
-                "minute": settings_data.get("morning", {}).get("minute", 30)
+                "minute": settings_data.get("morning", {}).get("minute", 25)
             },
             "afternoon": {
                 "hour": settings_data.get("afternoon", {}).get("hour", 13),
