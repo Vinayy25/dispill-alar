@@ -400,7 +400,7 @@ async def update_intake(update: IntakeUpdate):
     
     # Check if the intake history document exists
     history_doc = intake_history_ref.get()
-    if not history_doc.exists():
+    if not history_doc.exists:
         # Initialize with all periods as False
         intake_history_ref.set({
             "morning": False,
