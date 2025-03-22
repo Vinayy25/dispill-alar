@@ -185,7 +185,6 @@ async def health_check():
 # Enhanced notification scheduler with timezone awareness
 async def check_reminders():
     logger.info("Running reminder check")
-    current_time = datetime.now(timezone.utc)
     
     users_ref = db.collection("USER")
     users = users_ref.stream()
@@ -199,29 +198,39 @@ async def check_reminders():
             settings = user_data.get("notification_settings", {})
             if not settings.get("reminders_enabled", True):
                 continue
-                
-            # Get time windows with timezone
+            
+            # Get user's timezone
+            user_tz = get_user_timezone(user_data)
+            # Current time in user's timezone
+            current_time_user_tz = datetime.now(user_tz)
+            
+            # Get time windows for this user
             time_windows = get_user_time_windows(user_email)
             intake_history_ref = user.reference.collection("intake_history")
             
             for period, window in time_windows.items():
-                due_time = current_time.replace(
+                # Create the due time directly in user's timezone
+                due_time = current_time_user_tz.replace(
                     hour=window["hour"],
                     minute=window["minute"],
                     second=0,
                     microsecond=0
                 )
                 
-                # Handle timezone conversion
-                if user_data.get("timezone"):
-                    due_time = due_time.astimezone(user_data["timezone"])
+                # If due_time is in the past (for today), it will still work correctly
                 
-                # Check due notifications
-                if current_time >= due_time - timedelta(minutes=NOTIFICATION_WINDOW_MINUTES):
+                # Check due notifications - window starts NOTIFICATION_WINDOW_MINUTES before due time
+                window_start = due_time - timedelta(minutes=NOTIFICATION_WINDOW_MINUTES)
+                window_end = due_time + timedelta(minutes=NOTIFICATION_WINDOW_MINUTES)
+                
+                # Only process if we're within the notification window
+                if window_start <= current_time_user_tz <= window_end:
+                    logger.info(f"Checking due notification for user {user_email} - {period}")
                     check_due_notification(user, period, due_time, intake_history_ref)
                 
-                # Check missed doses
-                if current_time > due_time + timedelta(minutes=NOTIFICATION_WINDOW_MINUTES):
+                # Check missed doses - after grace period
+                if current_time_user_tz > window_end:
+                    logger.info(f"Checking missed dose for user {user_email} - {period}")
                     check_missed_dose(user, period, due_time, intake_history_ref)
                     
         except Exception as e:
@@ -272,11 +281,14 @@ def check_due_notification(user, period, due_time, intake_history_ref):
     taken = period_data.get("taken", False)
     notification_sent = period_data.get("notification_sent", False)
     
-    # Calculate the start of the notification window in user's timezone
-    window_start = due_time - timedelta(minutes=NOTIFICATION_WINDOW_MINUTES)
+    # Current time in user's timezone - already have due_time in user's timezone from caller
     current_time_user_tz = datetime.now(user_tz)
     
-    if not taken and not notification_sent and current_time_user_tz >= window_start:
+    # Calculate the start of the notification window
+    window_start = due_time - timedelta(minutes=NOTIFICATION_WINDOW_MINUTES)
+    
+    # Only send if not taken, notification not sent, and we're within the window
+    if not taken and not notification_sent and current_time_user_tz >= window_start and current_time_user_tz <= due_time:
         # Send reminder notification
         user_doc = user.reference.get()
         if user_doc.exists:
