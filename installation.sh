@@ -45,10 +45,7 @@ if [ ! -d ".git" ]; then
     git clone https://github.com/yourusername/dispill-alar.git .
 fi
 
-# Create and activate virtual environment
-echo "Setting up Python virtual environment..."
-python3 -m venv venv
-source venv/bin/activate
+
 
 # Install Python packages
 echo "Installing Python dependencies..."

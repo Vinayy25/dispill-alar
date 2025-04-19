@@ -12,8 +12,13 @@ class NotificationState extends ChangeNotifier {
     isLoading = true;
     notifyListeners();
     // Simulate a network request
-   notifications = await HttpService().getNotifications(email);
-   isLoading = false;
-   notifyListeners();
+    notifications = await HttpService().getNotifications(email);
+    isLoading = false;
+    notifyListeners();
+  }
+
+  void removeNotification(Notifications notification) {
+    notifications.removeWhere((item) => item.period == notification.period);
+    notifyListeners();
   }
 }

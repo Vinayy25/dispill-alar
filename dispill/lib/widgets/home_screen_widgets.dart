@@ -17,13 +17,12 @@ import 'package:provider/provider.dart';
 class HomeNotificationBlock extends StatelessWidget {
   final String pillIcon;
   final String statusName;
-
   final String tabletName;
-
   final double tabletDosage;
   final bool beforeFood;
   final String timeOfDay;
   final TimeOfDay timeToTake;
+  final VoidCallback? onTakenPressed; // Add this callback
 
   const HomeNotificationBlock({
     super.key,
@@ -34,78 +33,204 @@ class HomeNotificationBlock extends StatelessWidget {
     required this.beforeFood,
     required this.timeOfDay,
     required this.timeToTake,
+    this.onTakenPressed,
   });
 
   @override
   Widget build(BuildContext context) {
+    final bool isMissed = statusName.contains('alert');
+    final Color cardColor = isMissed
+        ? const Color(0xFFFFF3F3) // Light red background for missed
+        : Colors.white;
+    final Color accentColor = isMissed
+        ? const Color(0xFFE53935) // Red accent for missed
+        : const Color(0xff28AA93); // Green for normal
+
     return Container(
-      margin: const EdgeInsets.only(left: 20, right: 50, bottom: 20),
-      height: 72,
-      width: 280,
-      decoration: BoxDecoration(boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.3),
-          blurRadius: 3.0,
-          spreadRadius: 1.0,
-          offset: const Offset(0, 3), // Adjust the offset for shadow direction
-        )
-      ], borderRadius: BorderRadius.circular(10), color: Colors.white),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          Image.asset(
-            pillIcon,
-            fit: BoxFit.contain,
-            height: 25,
-            width: 30,
-          ),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              const SizedBox(
-                height: 5,
-              ),
-              AppLargeText(
-                text: tabletName,
-                fontsize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-              AppText(
-                  fontWeight: FontWeight.w100,
-                  color: Colors.black38,
-                  fontsize: 12,
-                  text:
-                      '${tabletDosage.toInt()} tablet ${tabletDosage > 1 ? 's' : ''}/${beforeFood ? 'before meal' : 'after meal'}'),
-              Row(
-                children: [
-                  AppText(
-                    text: timeOfDay,
-                    color: const Color(0xff28AA93),
-                    fontWeight: FontWeight.w700,
-                  ),
-                  const SizedBox(
-                    width: 10,
-                  ),
-                  AppText(
-                    text:
-                        "${timeToTake.hour}${timeToTake.minute > 0 ? ':${timeToTake.minute}' : ''} ${timeToTake.period.toString().substring(10, 12).toUpperCase()}",
-                    color: const Color(0xff28AA93),
-                    fontWeight: FontWeight.w700,
-                  ),
-                ],
-              ),
-              const SizedBox(
-                height: 5,
-              )
-            ],
-          ),
-          Image.asset(
-            statusName,
-            fit: BoxFit.contain,
-            height: 38,
-            width: 28,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 10,
+            spreadRadius: 0,
+            offset: const Offset(0, 4),
           )
         ],
+        border: isMissed
+            ? Border.all(color: accentColor.withOpacity(0.5), width: 1.5)
+            : null,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            // Left section - Pill icon with background
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: accentColor.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Center(
+                child: Image.asset(
+                  pillIcon,
+                  height: 30,
+                  width: 30,
+                ),
+              ),
+            ),
+
+            // Middle section - Medication info
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Medication name with status badge
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            tabletName,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines:
+                                2, // Allow two lines for longer medication names
+                            overflow:
+                                TextOverflow.visible, // Don't use ellipsis
+                          ),
+                        ),
+                        if (isMissed)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4.0),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: accentColor,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Text(
+                                'MISSED',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 4),
+
+                    // Dosage info
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '${tabletDosage.toInt()} tablet${tabletDosage > 1 ? 's' : ''}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[800],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          beforeFood ? 'Before meal' : 'After meal',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // Time info row
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time,
+                          size: 16,
+                          color: accentColor,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          "${timeToTake.hour}:${timeToTake.minute.toString().padLeft(2, '0')} ${timeToTake.period.toString().substring(10, 12).toUpperCase()}",
+                          style: TextStyle(
+                            color: accentColor,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                        if (timeOfDay.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: accentColor.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              timeOfDay,
+                              style: TextStyle(
+                                color: accentColor,
+                                fontWeight: FontWeight.w500,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Right section - Action button
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: isMissed
+                    ? Colors.red.withOpacity(0.1)
+                    : Colors.green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: isMissed
+                  ? IconButton(
+                      icon: const Icon(Icons.notification_important,
+                          color: Colors.red),
+                      onPressed: onTakenPressed,
+                    )
+                  : IconButton(
+                      icon: const Icon(Icons.check_circle, color: Colors.green),
+                      onPressed: onTakenPressed,
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -144,7 +269,6 @@ Widget emptyGreyContainer(String time) {
 Widget myDrawer(BuildContext context) {
   return Drawer(
     width: 300,
-
     child: ListView(
       children: [
         const DrawerHeader(
@@ -163,12 +287,8 @@ Widget myDrawer(BuildContext context) {
           ),
         ),
         GestureDetector(
-          onTap: () async => 
-          
-          Navigator.of(context).push(MaterialPageRoute(builder: (context) => LandingPage(
-          )
-          ))
-          ,
+          onTap: () async => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (context) => LandingPage())),
           child: const DrawerContainer(
               text: "Home",
               leading: Icon(Icons.home, color: Colors.black),
@@ -191,28 +311,25 @@ Widget myDrawer(BuildContext context) {
         }),
         GestureDetector(
           onTap: () {
-            Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => const CheckHistory()));
+            Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const CheckHistory()));
           },
           child: const DrawerContainer(
               text: "Check History",
               leading: Icon(Icons.history, color: Colors.black),
               route: ''),
         ),
-       
-           GestureDetector(
-              onTap: () async {
+        GestureDetector(
+          onTap: () async {
+            String userEmail = FirebaseAuth.instance.currentUser!.email!;
 
-            
-                String userEmail = FirebaseAuth.instance.currentUser!.email!;
-    
-                Navigator.of(context).pushNamed('/settings');
-              },
-              child: const DrawerContainer(
-                  text: "Settings",
-                  leading: Icon(Icons.settings, color: Colors.black),
-                  route: ''),
-            ),
+            Navigator.of(context).pushNamed('/settings');
+          },
+          child: const DrawerContainer(
+              text: "Settings",
+              leading: Icon(Icons.settings, color: Colors.black),
+              route: ''),
+        ),
         const Padding(
           padding: EdgeInsets.only(top: 20.0, bottom: 20, left: 5, right: 5),
           child: Divider(
@@ -248,12 +365,12 @@ Widget myDrawer(BuildContext context) {
               leading: Icon(Icons.report),
               route: '',
             )),
-       GestureDetector(onTap: () async {
-              final bool res = await AuthService().signOut(context);
-              // res == true
-              //     ? provider.setAuthenticated(false)
-              //     : print('unable to logout');
-      
+        GestureDetector(
+          onTap: () async {
+            final bool res = await AuthService().signOut(context);
+            // res == true
+            //     ? provider.setAuthenticated(false)
+            //     : print('unable to logout');
           },
           child: Container(
             margin: const EdgeInsets.only(left: 30, right: 30, top: 100),
@@ -271,7 +388,6 @@ Widget myDrawer(BuildContext context) {
             ),
           ),
         ),
-
       ],
     ),
   );

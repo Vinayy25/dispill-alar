@@ -29,6 +29,7 @@ class HttpService {
                 value['takeDuration'] ?? '',
                 value['missed'] ?? false,
                 value['afterFood'] ?? false,
+                key ?? '',
                 (value['dosage'] ?? 0).toDouble(),
               ),
             );

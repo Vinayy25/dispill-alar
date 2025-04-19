@@ -2,6 +2,7 @@ class Notifications {
   final String tabletName;
   final String takeTime;
   final String takeDuration;
+  final String period;
   final bool missed;
   final bool afterFood;
   final double dosage;
@@ -12,6 +13,7 @@ class Notifications {
     this.takeDuration,
     this.missed,
     this.afterFood,
+    this.period,
     this.dosage,
   );
 }

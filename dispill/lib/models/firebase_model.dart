@@ -423,7 +423,7 @@ class FirebaseService {
     }
   }
 
-  Future <dynamic> getStoreDetails() async {
+  Future<dynamic> getStoreDetails() async {
     try {
       DocumentSnapshot storeDetails = await _firestore
           .collection('USER')
@@ -498,6 +498,56 @@ class FirebaseService {
       await documentReference.set(currentData);
       print("done");
     } catch (error) {
+      throw Exception(error.toString());
+    }
+  }
+
+  Future<void> markMedicationAsTaken(String period, String date) async {
+    // Add validation to ensure period is not empty
+    if (period.isEmpty) {
+      print("Error: Cannot mark medication as taken with empty period");
+      return;
+    }
+
+    final documentReference = FirebaseFirestore.instance
+        .collection('USER')
+        .doc(user?.email)
+        .collection('intake_history')
+        .doc(date);
+
+    try {
+      // Get the current document
+      DocumentSnapshot snapshot = await documentReference.get();
+
+      if (snapshot.exists) {
+        // Update the specific period's taken status
+        await documentReference.update({
+          '$period.taken': true,
+        });
+      } else {
+        // If document doesn't exist, create it with default structure
+        Map<String, dynamic> defaultData = {
+          'morning': {
+            'taken': period == 'morning',
+            'notification_sent': false,
+            'missed_notification_sent': false
+          },
+          'afternoon': {
+            'taken': period == 'afternoon',
+            'notification_sent': false,
+            'missed_notification_sent': false
+          },
+          'night': {
+            'taken': period == 'night',
+            'notification_sent': false,
+            'missed_notification_sent': false
+          },
+        };
+        await documentReference.set(defaultData);
+      }
+      print("Medication marked as taken for $period");
+    } catch (error) {
+      print("Error marking medication as taken: $error");
       throw Exception(error.toString());
     }
   }

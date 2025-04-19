@@ -311,7 +311,7 @@ class _TabletDataContainerState extends State<TabletDataContainer> {
                         provider.updatePrescriptionProperty(
                             index: widget.index,
                             frequency: {
-                              'morning': !(index.frequency['morning']!),
+                              'morning': !(index.frequency['morning'] ?? false),
                               'afternoon':
                                   index.frequency['afternoon'] ?? false,
                               'night': index.frequency['night'] ?? false
@@ -328,7 +328,8 @@ class _TabletDataContainerState extends State<TabletDataContainer> {
                             index: widget.index,
                             frequency: {
                               'morning': index.frequency['morning'] ?? false,
-                              'afternoon': !(index.frequency['afternoon']!),
+                              'afternoon':
+                                  !(index.frequency['afternoon'] ?? false),
                               'night': index.frequency['night'] ?? false
                             });
                       },
@@ -345,7 +346,7 @@ class _TabletDataContainerState extends State<TabletDataContainer> {
                               'morning': index.frequency['morning'] ?? false,
                               'afternoon':
                                   index.frequency['afternoon'] ?? false,
-                              'night': !(index.frequency['night']!)
+                              'night': !(index.frequency['night'] ?? false)
                             });
                       },
                       child: Container(

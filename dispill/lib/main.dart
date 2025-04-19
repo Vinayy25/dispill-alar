@@ -5,6 +5,7 @@ import 'package:dispill/routes.dart';
 import 'package:dispill/services/http.dart';
 import 'package:dispill/states/auth_state.dart';
 import 'package:dispill/states/device_parameters_state.dart';
+import 'package:dispill/states/history_state.dart';
 import 'package:dispill/states/notification_state.dart';
 import 'package:dispill/states/prescription_state.dart';
 import 'package:dispill/states/settings_state.dart';
@@ -16,7 +17,6 @@ import 'package:provider/provider.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
-
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,11 +43,8 @@ void main() async {
     _showNotification(message);
   });
 
-
   runApp(const MyApp());
 }
-
-
 
 void _showNotification(RemoteMessage message) async {
   final notification = message.notification;
@@ -97,9 +94,9 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (context) {
           return NotificationState();
         }),
+        ChangeNotifierProvider(create: (_) => HistoryState()),
       ],
       child: MaterialApp(
-        
         debugShowCheckedModeBanner: false,
         title: 'Dispill',
         theme: ThemeData(
@@ -120,12 +117,9 @@ class LandingPage extends StatelessWidget {
     return Consumer<AuthStateProvider>(
       builder: (context, provider, child) {
         return provider.isAuthenticated == true
-            ? Homescreen( )
+            ? Homescreen()
             : const LoginScreen();
       },
     );
   }
 }
-
-
-

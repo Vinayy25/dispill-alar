@@ -310,4 +310,16 @@ class PrescriptionStateProvider extends ChangeNotifier {
     await FirebaseService().updatePrescriptionInFirstore(prescription[index]);
     notifyListeners();
   }
+
+  Future<void> markMedicationTaken(String period) async {
+    // Get today's date in ISO format (YYYY-MM-DD)
+    String today = DateTime.now().toIso8601String().split('T')[0];
+
+    // Call the Firebase service method
+    await FirebaseService().markMedicationAsTaken(period, today);
+
+    // You may want to update your local state or refresh data
+    // This depends on how your app manages the notification state
+    notifyListeners();
+  }
 }
