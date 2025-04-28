@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:dispill/models/notification.dart';
 
 class HttpService {
-  String baseUrl = "http://dispillalar.work.gd";
+  String baseUrl = "http://makeyourprojects.in";
   Future<List<Notifications>> getNotifications(String email) async {
     final url = Uri.parse(baseUrl + "/update-notifications?email=$email");
     final List<Notifications> notifications = [];
