@@ -332,6 +332,17 @@ def check_missed_dose(user, period, due_time, intake_history_ref):
         intake_history_data = intake_history_doc.to_dict()
     
     period_data = intake_history_data.get(period, {})
+    
+    # Add this check to handle boolean values
+    if isinstance(period_data, bool):
+        period_data = {
+            "taken": period_data,
+            "notification_sent": False,
+            "missed_notification_sent": False
+        }
+        # Save the updated structure back to the database
+        intake_history_doc_ref.update({ period: period_data })
+    
     taken = period_data.get("taken", False)
     missed_notification_sent = period_data.get("missed_notification_sent", False)
     
@@ -412,7 +423,7 @@ async def update_intake(update: IntakeUpdate):
     
     # Check if the intake history document exists
     history_doc = intake_history_ref.get()
-    if not history_doc.exists:
+    if not history_doc.exists():
         # Initialize with all periods as False
         intake_history_ref.set({
             "morning": False,
